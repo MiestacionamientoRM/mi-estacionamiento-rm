@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Plaza {
+  id        Int      @id @default(autoincrement())
+  name      String
+  timezone  String   @default("America/Mexico_City")
+  createdAt DateTime @default(now())
+
+  tariffConfig TariffConfig?
+  tickets       Ticket[]
+}
+
+model TariffConfig {
+  id             Int      @id @default(autoincrement())
+  plazaId        Int      @unique
+  toleranceMin   Int      @default(15)
+  firstHourPrice Int      @default(20)
+  fractionMin    Int      @default(15)
+  fractionPrice  Int      @default(15)
+  currency       String   @default("MXN")
+  dailyCap       Int?
+  createdAt      DateTime @default(now())
+
+  plaza Plaza @relation(fields: [plazaId], references: [id])
+}
+
+model Ticket {
+  id         Int      @id @default(autoincrement())
+  plazaId    Int
+  plate      String?
+  entryTime  DateTime
+  exitTime   DateTime?
+  status     String   @default("open")
+  level      Int?
+  color      String?
+  createdAt  DateTime @default(now())
+
+  plaza  Plaza        @relation(fields: [plazaId], references: [id])
+  tokens TicketToken[]
+}
+
+model TicketToken {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id])
+}

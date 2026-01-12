@@ -1,0 +1,20 @@
+{
+  "name": "mi-estacionamiento-rm",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.1",
+    "next": "^15.0.0",
+    "prisma": "^6.19.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
+
+ 
