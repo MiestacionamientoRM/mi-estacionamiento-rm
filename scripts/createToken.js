@@ -7,11 +7,15 @@ async function main() {
   // 👇 Ticket que ya creaste
   const ticketId = 1;
 
-  // 1️⃣ Generar token plano (esto irá en el QR)
+  // 1️⃣ Generar token plano (esto irá en el QR / URL)
   const plainToken = crypto.randomBytes(32).toString("hex");
 
   // 2️⃣ Hashear token + pepper (seguridad)
-  const pepper = process.env.TOKEN_PEPPER;
+  const pepperRaw = process.env.TOKEN_PEPPER;
+  const pepper = pepperRaw
+  ? pepperRaw.trim().replace(/^"(.*)"$/, "$1")
+  : null;
+  
   if (!pepper) {
     throw new Error("TOKEN_PEPPER no está definido en el .env");
   }
@@ -33,17 +37,25 @@ async function main() {
     },
   });
 
-  // 5️⃣ URL que irá en el QR
-  const qrUrl = `http://localhost:3000/ticket/${plainToken}`;
-
+  // ✅ Logs correctos (DENTRO de main)
   console.log("✅ Token creado correctamente");
-  console.log("🔗 URL para el QR:");
-  console.log(qrUrl);
+  console.log("TOKEN PARA URL / QR (token plano):");
+  console.log(plainToken);
+
+  console.log("TOKEN HASH (DB):");
+  console.log(tokenHash);
+
+  // 5️⃣ URL que irá en el QR
+  // 🔥 OJO: en producción cambia el dominio por el de Vercel
+  const qrUrlLocal = `http://localhost:3000/ticket/${plainToken}`;
+  console.log("🔗 URL local para el QR:");
+  console.log(qrUrlLocal);
 }
 
 main()
   .catch((e) => {
     console.error("❌ Error al crear el token:", e);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();

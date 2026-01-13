@@ -62,7 +62,11 @@ function formatEntryTime(date) {
 export default async function TicketPage({ params }) {
   const plainToken = params.token;
 
-  const pepper = process.env.TOKEN_PEPPER;
+  const pepperRaw = process.env.TOKEN_PEPPER;
+  const pepper = pepperRaw
+  ? pepperRaw.trim().replace(/^"(.*)"$/, "$1")
+  : null;
+  
   if (!pepper) {
     return (
       <main>
