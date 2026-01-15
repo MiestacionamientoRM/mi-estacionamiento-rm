@@ -53,11 +53,14 @@ function formatDuration(mins) {
 
 function formatEntryTime(date) {
   return new Date(date).toLocaleString("es-MX", {
+    timeZone: "America/Mexico_City",
     weekday: "long",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   });
 }
+
 
 export default async function TicketPage({ params }) {
   const plainToken = params.token;
