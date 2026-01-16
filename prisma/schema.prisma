@@ -41,7 +41,8 @@ model Ticket {
   level      Int?
   color      String?
   createdAt  DateTime @default(now())
-
+  finalAmount Int?
+  
   plaza  Plaza        @relation(fields: [plazaId], references: [id])
   tokens TicketToken[]
 }
