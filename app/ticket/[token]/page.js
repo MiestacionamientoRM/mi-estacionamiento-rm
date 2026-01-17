@@ -87,25 +87,22 @@ export default async function TicketPage({ params }) {
 
   // Buscar token válido en BD
   const record = await prisma.ticketToken.findFirst({
-    where: {
-      tokenHash,
-      revokedAt: null,
-      expiresAt: { gt: new Date() },
-    },
-    include: {
-      ticket: {
-        include: {
-          plaza: { include: { tariffConfig: true } },
-        },
+  where: { tokenHash },
+  include: {
+    ticket: {
+      include: {
+        plaza: { include: { tariffConfig: true } },
       },
     },
-  });
+  },
+});
+
 
   if (!record) {
     return (
       <main>
-        <h1>QR inválido o expirado</h1>
-        <p>Este QR ya no es válido. Pide uno nuevo en la plaza.</p>
+        <h1>QR inválido</h1>
+        <p>Este QR ya no existe. Pide uno nuevo en la plaza.</p>
       </main>
     );
   }
@@ -113,6 +110,63 @@ export default async function TicketPage({ params }) {
   const ticket = record.ticket;
   const plaza = ticket.plaza;
   const tariff = plaza.tariffConfig;
+
+  // ✅ Si el ticket ya tiene salida, mostramos "Ticket cerrado"
+if (ticket.exitTime) {
+  return (
+    <main style={{ maxWidth: 560 }}>
+      <h1>Ticket cerrado ✅</h1>
+
+      <div style={{ padding: 14, border: "1px solid #ddd", borderRadius: 14 }}>
+        <p><b>Plaza:</b> {plaza.name}</p>
+        <p><b>Placa:</b> {maskPlate(ticket.plate)}</p>
+        <p><b>Ubicación:</b> Nivel {ticket.level ?? "—"} — {ticket.color ?? "—"}</p>
+
+        <p><b>Hora de entrada:</b> {formatEntryTime(ticket.entryTime)}</p>
+        <p><b>Hora de salida:</b> {formatEntryTime(ticket.exitTime)}</p>
+
+        <p style={{ fontSize: 22, marginTop: 8 }}>
+          <b>Total pagado:</b> ${ticket.finalAmount ?? "—"} {tariff?.currency ?? "MXN"}
+        </p>
+      </div>
+
+      <p style={{ marginTop: 12, color: "#666" }}>
+        Gracias por tu visita 🚗
+      </p>
+    </main>
+  );
+}
+
+
+  const isClosed = Boolean(ticket.exitTime);
+
+  if (isClosed) {
+  return (
+    <main style={{ maxWidth: 560 }}>
+      <h1>Ticket cerrado</h1>
+
+      <div style={{ padding: 14, border: "1px solid #ddd", borderRadius: 14 }}>
+        <p><b>Plaza:</b> {plaza.name}</p>
+        <p><b>Placa:</b> {maskPlate(ticket.plate)}</p>
+        <p><b>Ubicación:</b> Nivel {ticket.level ?? "—"} — {ticket.color ?? "—"}</p>
+
+        <p><b>Hora de entrada:</b> {formatEntryTime(ticket.entryTime)}</p>
+        <p><b>Hora de salida:</b> {formatEntryTime(ticket.exitTime)}</p>
+
+        <p><b>Tiempo total:</b> {formatDuration(ticket.totalMinutes)}</p>
+
+        <p style={{ fontSize: 22, marginTop: 8 }}>
+          <b>Total pagado:</b> ${ticket.finalAmount} {tariff?.currency ?? "MXN"}
+        </p>
+      </div>
+
+      <p style={{ marginTop: 12, color: "#666" }}>
+        Gracias por tu visita 🚗
+      </p>
+    </main>
+  );
+}
+
 
   const { mins, chargeableMins, estimate } = calcEstimateMxN({
     entryTime: ticket.entryTime,
