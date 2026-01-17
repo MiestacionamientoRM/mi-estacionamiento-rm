@@ -113,6 +113,11 @@ export default async function TicketPage({ params }) {
 
   // ✅ Si el ticket ya tiene salida, mostramos "Ticket cerrado"
 if (ticket.exitTime) {
+  const totalMins = minutesDiff(new Date(ticket.entryTime), new Date(ticket.exitTime));
+
+  const tolerance = tariff?.toleranceMin ?? 0;
+  const chargeableMins = Math.max(0, totalMins - tolerance);
+
   return (
     <main style={{ maxWidth: 560 }}>
       <h1>Ticket cerrado ✅</h1>
@@ -124,6 +129,9 @@ if (ticket.exitTime) {
 
         <p><b>Hora de entrada:</b> {formatEntryTime(ticket.entryTime)}</p>
         <p><b>Hora de salida:</b> {formatEntryTime(ticket.exitTime)}</p>
+        <p><b>Tiempo total:</b> {formatDuration(totalMins)}</p>
+        <p><b>Tiempo cobrable:</b> {formatDuration(chargeableMins)}</p>
+
 
         <p style={{ fontSize: 22, marginTop: 8 }}>
           <b>Total pagado:</b> ${ticket.finalAmount ?? "—"} {tariff?.currency ?? "MXN"}
