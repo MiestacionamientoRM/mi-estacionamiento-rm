@@ -2,12 +2,15 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
-    console.log("ADMIN_PASSWORD exists?", Boolean(process.env.ADMIN_PASSWORD));
-  console.log("ADMIN_PASSWORD length:", process.env.ADMIN_PASSWORD?.length);
-  
   const { password } = await req.json();
 
+  if (!process.env.ADMIN_PASSWORD) {
+    console.log("❌ ADMIN_PASSWORD missing");
+    return new NextResponse("Server misconfigured", { status: 500 });
+  }
+
   if (password !== process.env.ADMIN_PASSWORD) {
+    console.log("❌ Wrong password");
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -17,6 +20,8 @@ export async function POST(req) {
     secure: true,
     path: "/",
   });
+
+  console.log("✅ Admin logged in");
 
   return NextResponse.json({ ok: true });
 }
