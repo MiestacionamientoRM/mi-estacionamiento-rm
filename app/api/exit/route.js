@@ -13,7 +13,7 @@ function calcFinalMxN({ entryTime, now, tariff }) {
   const fractionMin = tariff?.fractionMin ?? 15;
   const fractionPrice = tariff?.fractionPrice ?? 0;
   const dailyCap = tariff?.dailyCap ?? null;
-  const exitGate = body.exitGate != null ? String(body.exitGate).trim() : null;
+  
 
 
   if (mins <= tolerance) return { mins, chargeableMins: 0, total: 0 };
