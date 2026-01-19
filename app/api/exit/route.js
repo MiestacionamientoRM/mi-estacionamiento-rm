@@ -36,6 +36,8 @@ export async function POST(req) {
   try {
     const body = await req.json();
     const ticketId = Number(body.ticketId);
+    const exitGate = body.exitGate != null ? String(body.exitGate).trim() : null;
+
 
     if (!Number.isFinite(ticketId)) {
       return NextResponse.json({ error: "ticketId inválido" }, { status: 400 });
@@ -56,8 +58,12 @@ export async function POST(req) {
         ok: true,
         alreadyClosed: true,
         ticketId: ticket.id,
-        exitTime: ticket.exitTime,
+        exitTime: ticket.exitTime.toISOString?.() ?? ticket.exitTime,
+        totalMins: ticket.totalMins ?? null,
+        chargeableMins: ticket.chargeableMins ?? null,
         finalAmount: ticket.finalAmount ?? null,
+        currency: ticket.plaza?.tariffConfig?.currency ?? "MXN",
+        status: ticket.status ?? null,
       });
     }
 
@@ -71,12 +77,16 @@ export async function POST(req) {
     });
 
     const updated = await prisma.ticket.update({
-      where: { id: ticketId },
-      data: {
-        exitTime: now,
-        finalAmount: total,
-      },
-    });
+  where: { id: ticketId },
+  data: {
+    exitTime: now,
+    totalMins: mins,
+    chargeableMins,
+    finalAmount: total,
+    status: "CLOSED",
+  },
+});
+
 
     // revoca tokens ligados al ticket (para que el QR deje de servir)
     await prisma.ticketToken.updateMany({

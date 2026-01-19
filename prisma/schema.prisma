@@ -32,20 +32,27 @@ model TariffConfig {
 }
 
 model Ticket {
-  id         Int      @id @default(autoincrement())
-  plazaId    Int
-  plate      String?
-  entryTime  DateTime
-  exitTime   DateTime?
-  status     String   @default("open")
-  level      Int?
-  color      String?
-  createdAt  DateTime @default(now())
-  finalAmount Int?
-  
+  id              Int       @id @default(autoincrement())
+  plazaId         Int
+  plate           String?
+  level           Int?
+  color           String?
+  entryTime       DateTime
+  entryGate       String?
+  exitTime        DateTime?
+  exitGate        String?
+
+  status          String    @default("OPEN") // 👈 ESTA LÍNEA ES LA CLAVE
+
+  totalMins       Int?
+  chargeableMins  Int?
+  finalAmount     Int?
+  createdAt       DateTime  @default(now())
+
   plaza  Plaza        @relation(fields: [plazaId], references: [id])
   tokens TicketToken[]
 }
+
 
 model TicketToken {
   id        Int      @id @default(autoincrement())

@@ -14,6 +14,7 @@ export async function POST(req) {
     const plate = String(body.plate ?? "").trim() || null;
     const level = body.level != null && body.level !== "" ? Number(body.level) : null;
     const color = body.color != null ? String(body.color) : null;
+    const entryGate = body.entryGate != null ? String(body.entryGate).trim() : null;
 
     if (!Number.isFinite(plazaId)) {
       return NextResponse.json({ error: "plazaId inválido" }, { status: 400 });
@@ -31,6 +32,7 @@ export async function POST(req) {
         plate,
         level,
         color,
+        entryGate,
         entryTime: new Date(),
       },
     });
