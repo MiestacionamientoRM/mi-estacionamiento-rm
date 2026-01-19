@@ -13,6 +13,8 @@ function calcFinalMxN({ entryTime, now, tariff }) {
   const fractionMin = tariff?.fractionMin ?? 15;
   const fractionPrice = tariff?.fractionPrice ?? 0;
   const dailyCap = tariff?.dailyCap ?? null;
+  const exitGate = body.exitGate != null ? String(body.exitGate).trim() : null;
+
 
   if (mins <= tolerance) return { mins, chargeableMins: 0, total: 0 };
 
@@ -54,18 +56,46 @@ export async function POST(req) {
 
     // ya cerrado
     if (ticket.exitTime) {
-      return NextResponse.json({
-        ok: true,
-        alreadyClosed: true,
-        ticketId: ticket.id,
-        exitTime: ticket.exitTime.toISOString?.() ?? ticket.exitTime,
-        totalMins: ticket.totalMins ?? null,
-        chargeableMins: ticket.chargeableMins ?? null,
-        finalAmount: ticket.finalAmount ?? null,
-        currency: ticket.plaza?.tariffConfig?.currency ?? "MXN",
-        status: ticket.status ?? null,
-      });
-    }
+  // Si mandan exitGate y aún no existe, lo guardamos (backfill)
+  if (exitGate && !ticket.exitGate) {
+    const updatedClosed = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { exitGate },
+      include: { plaza: { include: { tariffConfig: true } } },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      alreadyClosed: true,
+      updatedExitGate: true,
+      ticketId: updatedClosed.id,
+      exitTime: updatedClosed.exitTime?.toISOString?.() ?? updatedClosed.exitTime,
+      totalMins: updatedClosed.totalMins ?? null,
+      chargeableMins: updatedClosed.chargeableMins ?? null,
+      finalAmount: updatedClosed.finalAmount ?? null,
+      currency: updatedClosed.plaza?.tariffConfig?.currency ?? "MXN",
+      status: updatedClosed.status ?? null,
+      entryGate: updatedClosed.entryGate ?? null,
+      exitGate: updatedClosed.exitGate ?? null,
+    });
+  }
+
+  // Si ya estaba cerrado y no hay nada que actualizar
+  return NextResponse.json({
+    ok: true,
+    alreadyClosed: true,
+    ticketId: ticket.id,
+    exitTime: ticket.exitTime.toISOString?.() ?? ticket.exitTime,
+    totalMins: ticket.totalMins ?? null,
+    chargeableMins: ticket.chargeableMins ?? null,
+    finalAmount: ticket.finalAmount ?? null,
+    currency: ticket.plaza?.tariffConfig?.currency ?? "MXN",
+    status: ticket.status ?? null,
+    entryGate: ticket.entryGate ?? null,
+    exitGate: ticket.exitGate ?? null,
+  });
+}
+
 
     const now = new Date();
     const tariff = ticket.plaza?.tariffConfig;
@@ -80,6 +110,7 @@ export async function POST(req) {
   where: { id: ticketId },
   data: {
     exitTime: now,
+    exitGate,
     totalMins: mins,
     chargeableMins,
     finalAmount: total,
