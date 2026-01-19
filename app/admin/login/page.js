@@ -9,7 +9,8 @@ export default function AdminLogin() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const res = await fetch("/admin/actions", {
+    const res = await fetch("/api/admin/login", {
+
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
