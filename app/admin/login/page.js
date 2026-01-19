@@ -6,11 +6,10 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function doLogin() {
+    setError(null);
 
-    const res = await fetch("/api/admin/login", {
-
+    const res = await fetch("/admin/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
@@ -27,7 +26,7 @@ export default function AdminLogin() {
     <main style={{ maxWidth: 360, margin: "80px auto" }}>
       <h1>Admin Login</h1>
 
-      <form onSubmit={handleSubmit}>
+      <div>
         <input
           type="password"
           placeholder="Contraseña admin"
@@ -36,10 +35,14 @@ export default function AdminLogin() {
           style={{ width: "100%", padding: 10, marginTop: 12 }}
         />
 
-        <button style={{ marginTop: 12, width: "100%" }}>
+        <button
+          type="button"
+          onClick={doLogin}
+          style={{ marginTop: 12, width: "100%" }}
+        >
           Entrar
         </button>
-      </form>
+      </div>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
     </main>
