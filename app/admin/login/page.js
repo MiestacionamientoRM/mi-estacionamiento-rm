@@ -6,7 +6,8 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
 
-  async function doLogin() {
+  async function doLogin(e) {
+    e?.preventDefault?.();
     setError(null);
 
     const res = await fetch("/api/admin/actions", {
@@ -26,10 +27,27 @@ export default function AdminLogin() {
     <main style={{ maxWidth: 360, margin: "80px auto" }}>
       <h1>Admin Login</h1>
 
-      <div>
+      {/* Usamos form para poder aplicar autoComplete y Enter */}
+      <form onSubmit={doLogin} autoComplete="off">
+        {/* Campos “trampa” ocultos para que Chrome autofill se vaya aquí */}
+        <input
+          type="text"
+          name="username"
+          autoComplete="username"
+          style={{ display: "none" }}
+        />
         <input
           type="password"
-          name="admin-password"
+          name="password"
+          autoComplete="current-password"
+          style={{ display: "none" }}
+        />
+
+        {/* Campo real */}
+        <input
+          type="password"
+          name="admin_pin"
+          id="admin_pin"
           autoComplete="new-password"
           placeholder="Contraseña admin"
           value={password}
@@ -37,14 +55,10 @@ export default function AdminLogin() {
           style={{ width: "100%", padding: 10, marginTop: 12 }}
         />
 
-        <button
-          type="button"
-          onClick={doLogin}
-          style={{ marginTop: 12, width: "100%" }}
-        >
+        <button style={{ marginTop: 12, width: "100%" }} type="submit">
           Entrar
         </button>
-      </div>
+      </form>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
     </main>
