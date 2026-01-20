@@ -23,8 +23,9 @@ export async function POST(req) {
   cookies().set("admin", "true", {
     httpOnly: true,
     sameSite: "strict",
-    secure: true,
-    path: "/",
+    secure: process.env.NODE_ENV === "production", // en local false, en Vercel true
+    path: "/admin", // importante: solo aplica al admin
+    maxAge: 60 * 60 * 8, // 8 horas
   });
 
   console.log("✅ Admin logged in");

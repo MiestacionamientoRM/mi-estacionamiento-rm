@@ -9,7 +9,7 @@ async function getTickets() {
 }
 
 export default async function AdminDashboard() {
-  const isAdmin = cookies().get("admin");
+  const isAdmin = cookies().get("admin")?.value === "true";
   if (!isAdmin) redirect("/admin/login");
 
   const data = await getTickets();
@@ -17,6 +17,10 @@ export default async function AdminDashboard() {
   return (
     <main style={{ padding: 20 }}>
       <h1>Panel Admin</h1>
+
+      <form action="/api/admin/logout" method="post" style={{ marginBottom: 12 }}>
+        <button type="submit">Cerrar sesión</button>
+      </form>
 
       <h2>Tickets activos</h2>
       {data?.openTickets?.length ? (
