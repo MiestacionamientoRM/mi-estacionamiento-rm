@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import LogoutButton from "./LogoutButton";
 
 async function getTickets() {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/tickets`, {
@@ -18,9 +19,7 @@ export default async function AdminDashboard() {
     <main style={{ padding: 20 }}>
       <h1>Panel Admin</h1>
 
-      <form action="/api/admin/logout" method="post" style={{ marginBottom: 12 }}>
-        <button type="submit">Cerrar sesión</button>
-      </form>
+      <LogoutButton />
 
       <h2>Tickets activos</h2>
       {data?.openTickets?.length ? (
