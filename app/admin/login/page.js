@@ -9,7 +9,7 @@ export default function AdminLogin() {
   async function doLogin() {
     setError(null);
 
-    const res = await fetch("/admin/actions", {
+    const res = await fetch("/api/admin/actions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),

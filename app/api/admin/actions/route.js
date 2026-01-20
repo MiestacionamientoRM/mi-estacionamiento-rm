@@ -1,15 +1,21 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+function cleanEnv(raw) {
+  return raw?.trim().replace(/^"(.*)"$/, "$1"); // quita comillas si las hubiera
+}
+
 export async function POST(req) {
   const { password } = await req.json();
 
-  if (!process.env.ADMIN_PASSWORD) {
+  const adminPassword = cleanEnv(process.env.ADMIN_PASSWORD);
+
+  if (!adminPassword) {
     console.log("❌ ADMIN_PASSWORD missing");
     return new NextResponse("Server misconfigured", { status: 500 });
   }
 
-  if (password !== process.env.ADMIN_PASSWORD) {
+  if (String(password ?? "") !== adminPassword) {
     console.log("❌ Wrong password");
     return new NextResponse("Unauthorized", { status: 401 });
   }
