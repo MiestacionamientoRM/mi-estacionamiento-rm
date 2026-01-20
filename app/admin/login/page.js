@@ -29,6 +29,8 @@ export default function AdminLogin() {
       <div>
         <input
           type="password"
+          name="admin-password"
+          autoComplete="new-password"
           placeholder="Contraseña admin"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
