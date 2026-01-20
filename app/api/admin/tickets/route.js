@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
+import { requireAdmin } from "../../../../lib/adminAuth";
 
 export async function GET() {
+  
+  if (!requireAdmin()) {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
   try {
     const openTickets = await prisma.ticket.findMany({
       where: { exitTime: null },
