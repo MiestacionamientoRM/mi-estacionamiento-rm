@@ -3,6 +3,11 @@ import { redirect } from "next/navigation";
 import LogoutButton from "./LogoutButton";
 import { prisma } from "@/lib/prisma";
 
+const fmt = new Intl.DateTimeFormat("es-MX", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 export default async function AdminDashboard() {
   const isAdmin = cookies().get("admin")?.value === "true";
   if (!isAdmin) redirect("/admin/login");
@@ -33,8 +38,8 @@ export default async function AdminDashboard() {
           {openTickets.map((t) => (
             <li key={t.id}>
               Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} —{" "}
-              {t.color ?? "—"} — Entrada:{" "}
-              {new Date(t.entryTime).toLocaleString("es-MX")}
+              {t.color ?? "—"} — Entrada: {fmt.format(new Date(t.entryTime))}
+              {t.entryGate ? ` — Acceso: ${t.entryGate}` : ""}
             </li>
           ))}
         </ul>
@@ -48,7 +53,8 @@ export default async function AdminDashboard() {
           {closedTickets.map((t) => (
             <li key={t.id}>
               Ticket #{t.id} — Total: ${t.finalAmount ?? 0} — Salida:{" "}
-              {t.exitTime ? new Date(t.exitTime).toLocaleString("es-MX") : "—"}
+              {t.exitTime ? fmt.format(new Date(t.exitTime)) : "—"}
+              {t.exitGate ? ` — Salida: ${t.exitGate}` : ""}
             </li>
           ))}
         </ul>
