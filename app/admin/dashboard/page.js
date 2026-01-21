@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import LogoutButton from "./LogoutButton";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../../lib/prisma";
+
 
 const fmt = new Intl.DateTimeFormat("es-MX", {
   dateStyle: "medium",
@@ -26,9 +27,18 @@ export default async function AdminDashboard() {
     take: 50,
   });
 
+  const BUILD_MARK = "DASHBOARD_MARK_2026-01-20_01";
+
+
   return (
     <main style={{ padding: 20 }}>
       <h1>Panel Admin</h1>
+
+      <p style={{ color: "#666" }}>Build: {BUILD_MARK}</p>
+      <p style={{ color: "#666" }}>
+        openTickets: {openTickets.length} | closedTickets: {closedTickets.length}
+      </p>
+
 
       <LogoutButton />
 
