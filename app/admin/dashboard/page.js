@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import LogoutButton from "./LogoutButton";
+import CloseTicketButton from "./CloseTicketButton";
 import { prisma } from "../../../lib/prisma";
 
 
@@ -47,9 +48,8 @@ export default async function AdminDashboard() {
         <ul>
           {openTickets.map((t) => (
             <li key={t.id}>
-              Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} —{" "}
-              {t.color ?? "—"} — Entrada: {fmt.format(new Date(t.entryTime))}
-              {t.entryGate ? ` — Acceso: ${t.entryGate}` : ""}
+            Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} — {t.color ?? "—"}
+            <CloseTicketButton ticketId={t.id} />
             </li>
           ))}
         </ul>
