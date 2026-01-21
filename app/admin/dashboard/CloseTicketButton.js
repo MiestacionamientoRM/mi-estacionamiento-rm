@@ -13,19 +13,25 @@ export default function CloseTicketButton({ ticketId }) {
     setErr("");
 
     try {
-      const res = await fetch("/api/admin/close", {
+      const res = await fetch("/api/exit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketId, exitGate: "Salida Admin" }),
       });
 
+      // intenta leer JSON si existe (para ver el error real)
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch {
+        // si no es JSON, lo ignoramos
+      }
+
       if (!res.ok) {
-        const text = await res.text();
-        setErr(text || "Error al cerrar");
+        setErr(payload?.error || "Error al cerrar");
         return;
       }
 
-      // refresca dashboard para que el ticket pase a "cerrados"
       router.refresh();
     } catch (e) {
       setErr("Error de red");
