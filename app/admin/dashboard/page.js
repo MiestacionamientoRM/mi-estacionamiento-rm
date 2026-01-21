@@ -1,19 +1,25 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import LogoutButton from "./LogoutButton";
-
-async function getTickets() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/tickets`, {
-    cache: "no-store",
-  });
-  return res.json();
-}
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminDashboard() {
   const isAdmin = cookies().get("admin")?.value === "true";
   if (!isAdmin) redirect("/admin/login");
 
-  const data = await getTickets();
+  // ✅ Abiertos: NO tienen exitTime
+  const openTickets = await prisma.ticket.findMany({
+    where: { exitTime: null },
+    orderBy: { id: "desc" },
+    take: 50,
+  });
+
+  // ✅ Cerrados: SÍ tienen exitTime
+  const closedTickets = await prisma.ticket.findMany({
+    where: { exitTime: { not: null } },
+    orderBy: { exitTime: "desc" },
+    take: 50,
+  });
 
   return (
     <main style={{ padding: 20 }}>
@@ -22,11 +28,13 @@ export default async function AdminDashboard() {
       <LogoutButton />
 
       <h2>Tickets activos</h2>
-      {data?.openTickets?.length ? (
+      {openTickets.length ? (
         <ul>
-          {data.openTickets.map((t) => (
+          {openTickets.map((t) => (
             <li key={t.id}>
-              Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} — {t.color ?? "—"}
+              Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} —{" "}
+              {t.color ?? "—"} — Entrada:{" "}
+              {new Date(t.entryTime).toLocaleString("es-MX")}
             </li>
           ))}
         </ul>
@@ -35,9 +43,9 @@ export default async function AdminDashboard() {
       )}
 
       <h2 style={{ marginTop: 30 }}>Tickets cerrados</h2>
-      {data?.closedTickets?.length ? (
+      {closedTickets.length ? (
         <ul>
-          {data.closedTickets.map((t) => (
+          {closedTickets.map((t) => (
             <li key={t.id}>
               Ticket #{t.id} — Total: ${t.finalAmount ?? 0} — Salida:{" "}
               {t.exitTime ? new Date(t.exitTime).toLocaleString("es-MX") : "—"}
