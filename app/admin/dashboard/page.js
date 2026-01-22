@@ -34,6 +34,12 @@ const fmt = new Intl.DateTimeFormat("es-MX", {
   timeStyle: "short",
 });
 
+const fmtMoney = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  minimumFractionDigits: 2,
+});
+
 function fmtDuration(mins) {
   if (mins == null) return "—";
   const m = Number(mins);
@@ -43,13 +49,6 @@ function fmtDuration(mins) {
   const r = m % 60;
   return r === 0 ? `${h} h` : `${h} h ${r} min`;
 }
-
-const fmtMoney = new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  minimumFractionDigits: 2,
-});
-
 
 export default async function AdminDashboard() {
   const isAdmin = cookies().get("admin")?.value === "true";
