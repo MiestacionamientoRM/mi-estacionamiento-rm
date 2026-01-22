@@ -134,12 +134,24 @@ export default async function AdminDashboard() {
       {closedTickets.length ? (
         <ul>
           {closedTickets.map((t) => (
-            <li key={t.id}>
-              Ticket #{t.id} — Total: ${t.finalAmount ?? 0} — Salida:{" "}
-              {t.exitTime ? fmt.format(new Date(t.exitTime)) : "—"}
-              {t.exitGate ? ` — Salida: ${t.exitGate}` : ""}
+            <li key={t.id} style={{ marginBottom: 8 }}>
+              <b>Ticket #{t.id}</b>
+              {" — "}
+              Total: <b>${t.finalAmount ?? 0}</b>
+              {" — "}
+              Salida: {t.exitTime ? fmt.format(new Date(t.exitTime)) : "—"}
+              {t.exitGate ? ` — Gate: ${t.exitGate}` : ""}
+
+              <div style={{ color: "#555", marginTop: 2 }}>
+                Status: {t.status ?? "—"} · Total mins: {t.totalMins ?? "—"} · Cobrable:{" "}
+                {t.chargeableMins ?? "—"}
+                {t.plate ? ` · Placa: ${t.plate}` : ""}
+                {t.level != null ? ` · Nivel: ${t.level}` : ""}
+                {t.color ? ` · Color: ${t.color}` : ""}
+              </div>
             </li>
           ))}
+
         </ul>
       ) : (
         <p>No hay tickets cerrados.</p>
