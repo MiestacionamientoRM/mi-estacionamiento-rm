@@ -38,7 +38,8 @@ const fmt = new Intl.DateTimeFormat("es-MX", {
 export default async function AdminDashboard() {
   const isAdmin = cookies().get("admin")?.value === "true";
   if (!isAdmin) redirect("/admin/login");
-  const metrics = await getMetrics();
+  
+  const Metrics = await getMetrics();
 
 
   // ✅ Abiertos: NO tienen exitTime
