@@ -44,6 +44,12 @@ function fmtDuration(mins) {
   return r === 0 ? `${h} h` : `${h} h ${r} min`;
 }
 
+const fmtMoney = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  minimumFractionDigits: 2,
+});
+
 
 export default async function AdminDashboard() {
   const isAdmin = cookies().get("admin")?.value === "true";
@@ -155,11 +161,12 @@ export default async function AdminDashboard() {
               <div style={{ color: "#555", marginTop: 2 }}>
                 Status: {t.status ?? "—"} ·{" "}
                 Tiempo total: {fmtDuration(t.totalMins)} ·{" "}
-                Cobrable: ${t.chargeableMins ?? 0}
+                Cobrable: {fmtMoney.format(t.finalAmount ?? 0)}
                 {t.plate ? ` · Placa: ${t.plate}` : ""}
                 {t.level != null ? ` · Nivel: ${t.level}` : ""}
                 {t.color ? ` · Color: ${t.color}` : ""}
               </div>
+
 
             </li>
           ))}
