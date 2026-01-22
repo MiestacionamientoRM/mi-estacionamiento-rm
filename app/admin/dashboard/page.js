@@ -34,6 +34,16 @@ const fmt = new Intl.DateTimeFormat("es-MX", {
   timeStyle: "short",
 });
 
+function fmtDuration(mins) {
+  if (mins == null) return "—";
+  const m = Number(mins);
+  if (!Number.isFinite(m)) return "—";
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return r === 0 ? `${h} h` : `${h} h ${r} min`;
+}
+
 
 export default async function AdminDashboard() {
   const isAdmin = cookies().get("admin")?.value === "true";
