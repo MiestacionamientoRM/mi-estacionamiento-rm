@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/adminAuth";
+import { prisma } from "../../../../lib/prisma";
+import { requireAdmin } from "../../../../lib/adminAuth";
 
 export async function GET() {
   // 🔒 Protección admin
