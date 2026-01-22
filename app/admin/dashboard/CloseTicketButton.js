@@ -7,31 +7,46 @@ export default function CloseTicketButton({ ticketId }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [okMsg, setOkMsg] = useState("");
+
+  function formatBreakdown(b) {
+    if (!b) return "";
+    const p = b.parts || {};
+    const base = `mins=${b.mins}, cobrable=${b.chargeableMins}, tolerancia=${p.toleranceMin ?? 0}`;
+    const frac =
+      (p.fractions ?? 0) > 0
+        ? `, fracciones=${p.fractions} (${p.fractionMin}min)`
+        : "";
+    const cap = p.capped ? ", cap aplicado" : "";
+    return `${base}${frac}${cap} → total=$${b.total} ${b.currency ?? "MXN"}`;
+  }
 
   async function closeTicket() {
     setLoading(true);
     setErr("");
+    setOkMsg("");
 
     try {
-      const res = await fetch("/api/exit", {
+      const res = await fetch("/api/admin/close", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketId, exitGate: "Salida Admin" }),
       });
 
-      // intenta leer JSON si existe (para ver el error real)
-      let payload = null;
-      try {
-        payload = await res.json();
-      } catch {
-        // si no es JSON, lo ignoramos
-      }
+      const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        setErr(payload?.error || "Error al cerrar");
+        setErr(data?.error || "Error al cerrar");
         return;
       }
 
+      const msg = data?.alreadyClosed
+        ? `✅ Ya estaba cerrado. ${formatBreakdown(data.breakdown)}`
+        : `✅ Ticket cerrado. ${formatBreakdown(data.breakdown)}`;
+
+      setOkMsg(msg);
+
+      // refresca dashboard para moverlo a "cerrados"
       router.refresh();
     } catch (e) {
       setErr("Error de red");
@@ -45,6 +60,11 @@ export default function CloseTicketButton({ ticketId }) {
       <button onClick={closeTicket} disabled={loading}>
         {loading ? "Cerrando..." : "Cerrar ticket"}
       </button>
+
+      {okMsg ? (
+        <span style={{ color: "green", marginLeft: 8 }}>{okMsg}</span>
+      ) : null}
+
       {err ? <span style={{ color: "red", marginLeft: 8 }}>{err}</span> : null}
     </span>
   );
