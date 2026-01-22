@@ -21,7 +21,6 @@ function MetricCard({ title, value, icon }) {
   );
 }
 
-
 async function getMetrics() {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/metrics`, {
     cache: "no-store",
@@ -29,6 +28,7 @@ async function getMetrics() {
   return res.json();
 }
 
+// ✅ Helpers (solo una vez)
 const fmt = new Intl.DateTimeFormat("es-MX", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -50,12 +50,23 @@ function fmtDuration(mins) {
   return r === 0 ? `${h} h` : `${h} h ${r} min`;
 }
 
+function fmtAvgMinutesToHM(mins) {
+  if (mins == null) return "—";
+  const m = Math.round(Number(mins));
+  if (!Number.isFinite(m)) return "—";
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h <= 0) return `${r} min`;
+  if (r === 0) return `${h} h`;
+  return `${h} h ${r} min`;
+}
+
 export default async function AdminDashboard() {
   const isAdmin = cookies().get("admin")?.value === "true";
   if (!isAdmin) redirect("/admin/login");
-  
-  const Metrics = await getMetrics();
 
+  // ✅ SOLO una vez
+  const metrics = await getMetrics();
 
   // ✅ Abiertos: NO tienen exitTime
   const openTickets = await prisma.ticket.findMany({
@@ -73,61 +84,46 @@ export default async function AdminDashboard() {
 
   const BUILD_MARK = "DASHBOARD_MARK_2026-01-20_01";
 
-  const metrics = await getMetrics();
-
   return (
     <main style={{ padding: 20 }}>
       <h1>Panel Admin</h1>
 
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          <MetricCard title="Tickets activos" value={metrics.tickets.open} icon="🎫" />
-          <MetricCard title="Tickets cerrados" value={metrics.tickets.closed} icon="✅" />
-          <MetricCard
-            title="Ingresos"
-            value={`$${metrics.revenue.total} ${metrics.revenue.currency}`}
-            icon="💰"
-          />
-          <MetricCard
-            title="Tiempo promedio"
-            value={`${Math.round(metrics.averages.avgMinutes / 60)} h`}
-            icon="⏱"
-          />
-        </section>
+      {/* Cards */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <MetricCard
+          title="Tickets activos"
+          value={metrics?.tickets?.open ?? "—"}
+          icon="🎫"
+        />
+        <MetricCard
+          title="Tickets cerrados"
+          value={metrics?.tickets?.closed ?? "—"}
+          icon="✅"
+        />
+        <MetricCard
+          title="Ingresos"
+          value={fmtMoney.format(metrics?.revenue?.total ?? 0)}
+          icon="💰"
+        />
+        <MetricCard
+          title="Tiempo promedio"
+          value={fmtAvgMinutesToHM(metrics?.averages?.avgMinutes)}
+          icon="⏱"
+        />
+      </section>
 
-
-            <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 12, marginTop: 10, marginBottom: 16 }}>
-        <h2 style={{ margin: 0, marginBottom: 8 }}>Métricas</h2>
-
-        <p style={{ margin: 0 }}>
-          <b>Tickets:</b> Abiertos {metrics?.tickets?.open ?? "—"} | Cerrados {metrics?.tickets?.closed ?? "—"}
-        </p>
-
-        <p style={{ margin: 0 }}>
-          <b>Ingresos:</b> ${metrics?.revenue?.total ?? 0} {metrics?.revenue?.currency ?? "MXN"}
-        </p>
-
-        <p style={{ margin: 0 }}>
-          <b>Promedio:</b> {metrics?.averages?.avgMinutes ?? "—"} min
-        </p>
-
-        <p style={{ margin: 0 }}>
-          <b>Breakdown:</b> Pagaron {metrics?.breakdown?.charged ?? "—"} | Tolerancia {metrics?.breakdown?.tolerance ?? "—"}
-        </p>
-      </div>
-
-
+      {/* Debug (si quieres, luego lo quitamos) */}
       <p style={{ color: "#666" }}>Build: {BUILD_MARK}</p>
       <p style={{ color: "#666" }}>
         openTickets: {openTickets.length} | closedTickets: {closedTickets.length}
       </p>
-
 
       <LogoutButton />
 
@@ -136,8 +132,9 @@ export default async function AdminDashboard() {
         <ul>
           {openTickets.map((t) => (
             <li key={t.id}>
-            Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} — {t.color ?? "—"}
-            <CloseTicketButton ticketId={t.id} />
+              Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} —{" "}
+              {t.color ?? "—"}
+              <CloseTicketButton ticketId={t.id} />
             </li>
           ))}
         </ul>
@@ -152,10 +149,10 @@ export default async function AdminDashboard() {
             <li key={t.id} style={{ marginBottom: 8 }}>
               <b>Ticket #{t.id}</b>
               {" — "}
-              Total: <b>${t.finalAmount ?? 0}</b>
+              Total pagado: <b>{fmtMoney.format(t.finalAmount ?? 0)}</b>
               {" — "}
               Salida: {t.exitTime ? fmt.format(new Date(t.exitTime)) : "—"}
-              {t.exitGate ? ` — Gate: ${t.exitGate}` : ""}
+              {t.exitGate ? ` — Salida: ${t.exitGate}` : ""}
 
               <div style={{ color: "#555", marginTop: 2 }}>
                 Status: {t.status ?? "—"} ·{" "}
@@ -165,11 +162,8 @@ export default async function AdminDashboard() {
                 {t.level != null ? ` · Nivel: ${t.level}` : ""}
                 {t.color ? ` · Color: ${t.color}` : ""}
               </div>
-
-
             </li>
           ))}
-
         </ul>
       ) : (
         <p>No hay tickets cerrados.</p>
