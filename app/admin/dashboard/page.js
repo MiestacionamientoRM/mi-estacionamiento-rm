@@ -4,6 +4,24 @@ import LogoutButton from "./LogoutButton";
 import CloseTicketButton from "./CloseTicketButton";
 import { prisma } from "../../../lib/prisma";
 
+function MetricCard({ title, value, icon }) {
+  return (
+    <div
+      style={{
+        padding: 16,
+        border: "1px solid #ddd",
+        borderRadius: 12,
+        background: "#fafafa",
+      }}
+    >
+      <div style={{ fontSize: 22 }}>{icon}</div>
+      <div style={{ fontSize: 14, color: "#555" }}>{title}</div>
+      <div style={{ fontSize: 24, fontWeight: "bold" }}>{value}</div>
+    </div>
+  );
+}
+
+
 async function getMetrics() {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/metrics`, {
     cache: "no-store",
@@ -16,9 +34,12 @@ const fmt = new Intl.DateTimeFormat("es-MX", {
   timeStyle: "short",
 });
 
+
 export default async function AdminDashboard() {
   const isAdmin = cookies().get("admin")?.value === "true";
   if (!isAdmin) redirect("/admin/login");
+  const metrics = await getMetrics();
+
 
   // ✅ Abiertos: NO tienen exitTime
   const openTickets = await prisma.ticket.findMany({
@@ -41,6 +62,29 @@ export default async function AdminDashboard() {
   return (
     <main style={{ padding: 20 }}>
       <h1>Panel Admin</h1>
+
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 16,
+            marginBottom: 24,
+          }}
+        >
+          <MetricCard title="Tickets activos" value={metrics.tickets.open} icon="🎫" />
+          <MetricCard title="Tickets cerrados" value={metrics.tickets.closed} icon="✅" />
+          <MetricCard
+            title="Ingresos"
+            value={`$${metrics.revenue.total} ${metrics.revenue.currency}`}
+            icon="💰"
+          />
+          <MetricCard
+            title="Tiempo promedio"
+            value={`${Math.round(metrics.averages.avgMinutes / 60)} h`}
+            icon="⏱"
+          />
+        </section>
+
 
             <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 12, marginTop: 10, marginBottom: 16 }}>
         <h2 style={{ margin: 0, marginBottom: 8 }}>Métricas</h2>
