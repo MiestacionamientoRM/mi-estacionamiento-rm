@@ -153,12 +153,14 @@ export default async function AdminDashboard() {
               {t.exitGate ? ` — Gate: ${t.exitGate}` : ""}
 
               <div style={{ color: "#555", marginTop: 2 }}>
-                Status: {t.status ?? "—"} · Total mins: {t.totalMins ?? "—"} · Cobrable:{" "}
-                {t.chargeableMins ?? "—"}
+                Status: {t.status ?? "—"} ·{" "}
+                Tiempo total: {fmtDuration(t.totalMins)} ·{" "}
+                Cobrable: ${t.chargeableMins ?? 0}
                 {t.plate ? ` · Placa: ${t.plate}` : ""}
                 {t.level != null ? ` · Nivel: ${t.level}` : ""}
                 {t.color ? ` · Color: ${t.color}` : ""}
               </div>
+
             </li>
           ))}
 
