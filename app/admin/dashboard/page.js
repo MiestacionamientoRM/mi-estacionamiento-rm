@@ -4,6 +4,12 @@ import LogoutButton from "./LogoutButton";
 import CloseTicketButton from "./CloseTicketButton";
 import { prisma } from "../../../lib/prisma";
 
+async function getMetrics() {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/metrics`, {
+    cache: "no-store",
+  });
+  return res.json();
+}
 
 const fmt = new Intl.DateTimeFormat("es-MX", {
   dateStyle: "medium",
@@ -30,10 +36,32 @@ export default async function AdminDashboard() {
 
   const BUILD_MARK = "DASHBOARD_MARK_2026-01-20_01";
 
+  const metrics = await getMetrics();
 
   return (
     <main style={{ padding: 20 }}>
       <h1>Panel Admin</h1>
+
+            <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 12, marginTop: 10, marginBottom: 16 }}>
+        <h2 style={{ margin: 0, marginBottom: 8 }}>Métricas</h2>
+
+        <p style={{ margin: 0 }}>
+          <b>Tickets:</b> Abiertos {metrics?.tickets?.open ?? "—"} | Cerrados {metrics?.tickets?.closed ?? "—"}
+        </p>
+
+        <p style={{ margin: 0 }}>
+          <b>Ingresos:</b> ${metrics?.revenue?.total ?? 0} {metrics?.revenue?.currency ?? "MXN"}
+        </p>
+
+        <p style={{ margin: 0 }}>
+          <b>Promedio:</b> {metrics?.averages?.avgMinutes ?? "—"} min
+        </p>
+
+        <p style={{ margin: 0 }}>
+          <b>Breakdown:</b> Pagaron {metrics?.breakdown?.charged ?? "—"} | Tolerancia {metrics?.breakdown?.tolerance ?? "—"}
+        </p>
+      </div>
+
 
       <p style={{ color: "#666" }}>Build: {BUILD_MARK}</p>
       <p style={{ color: "#666" }}>
