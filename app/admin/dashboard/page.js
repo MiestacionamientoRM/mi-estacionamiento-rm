@@ -4,6 +4,9 @@ import LogoutButton from "./LogoutButton";
 import CloseTicketButton from "./CloseTicketButton";
 import { prisma } from "../../../lib/prisma";
 
+// ✅ Debug (luego lo quitamos)
+const BUILD_MARK = "DASHBOARD_MARK_2026-01-22_01";
+
 function MetricCard({ title, value, icon }) {
   return (
     <div
@@ -21,13 +24,6 @@ function MetricCard({ title, value, icon }) {
   );
 }
 
-async function getMetrics() {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/metrics`, {
-    cache: "no-store",
-  });
-  return res.json();
-}
-
 // ✅ Helpers (solo una vez)
 const fmt = new Intl.DateTimeFormat("es-MX", {
   dateStyle: "medium",
@@ -42,7 +38,7 @@ const fmtMoney = new Intl.NumberFormat("es-MX", {
 
 function fmtDuration(mins) {
   if (mins == null) return "—";
-  const m = Number(mins);
+  const m = Math.round(Number(mins));
   if (!Number.isFinite(m)) return "—";
   if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60);
@@ -65,7 +61,7 @@ function getRangeDates(range) {
   const now = new Date();
   const start = new Date(now);
 
-  switch (range) {
+  switch (String(range || "all").toLowerCase()) {
     case "today":
       start.setHours(0, 0, 0, 0);
       return { from: start, to: now };
@@ -84,7 +80,7 @@ function getRangeDates(range) {
       return { from: start, to: now };
 
     case "year":
-      start.setMonth(0, 1); // Jan 1
+      start.setMonth(0, 1);
       start.setHours(0, 0, 0, 0);
       return { from: start, to: now };
 
@@ -93,39 +89,51 @@ function getRangeDates(range) {
   }
 }
 
+async function getMetrics(range) {
+  const url = new URL(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/metrics`
+  );
+  if (range && range !== "all") url.searchParams.set("range", range);
+
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  return res.json();
+}
 
 export default async function AdminDashboard({ searchParams }) {
   const isAdmin = cookies().get("admin")?.value === "true";
   if (!isAdmin) redirect("/admin/login");
 
+  // ✅ 1) Rango arriba
   const range = searchParams?.range ?? "all";
   const { from, to } = getRangeDates(range);
 
+  // ✅ 2) Métricas con rango (si tu endpoint /metrics lo soporta)
+  const metrics = await getMetrics(range);
 
-  // ✅ SOLO una vez
-  const metrics = await getMetrics();
-
-  // ✅ Abiertos: NO tienen exitTime
+  // ✅ 3) Tickets abiertos
   const openTickets = await prisma.ticket.findMany({
     where: { exitTime: null },
     orderBy: { id: "desc" },
     take: 50,
   });
 
-  // ✅ Cerrados: SÍ tienen exitTime
+  // ✅ 4) Tickets cerrados filtrados por rango (por exitTime)
+  const closedWhere = {
+    exitTime: { not: null },
+    ...(from && to ? { exitTime: { gte: from, lt: to } } : {}),
+    ...(from && !to ? { exitTime: { gte: from } } : {}),
+  };
+
   const closedTickets = await prisma.ticket.findMany({
-    where: { exitTime: { not: null } },
+    where: closedWhere,
     orderBy: { exitTime: "desc" },
     take: 50,
   });
-
-  const BUILD_MARK = "DASHBOARD_MARK_2026-01-20_01";
 
   return (
     <main style={{ padding: 20 }}>
       <h1>Panel Admin</h1>
 
-      {/* Cards */}
       <section
         style={{
           display: "grid",
@@ -134,29 +142,16 @@ export default async function AdminDashboard({ searchParams }) {
           marginBottom: 24,
         }}
       >
-        <MetricCard
-          title="Tickets activos"
-          value={metrics?.tickets?.open ?? "—"}
-          icon="🎫"
-        />
-        <MetricCard
-          title="Tickets cerrados"
-          value={metrics?.tickets?.closed ?? "—"}
-          icon="✅"
-        />
-        <MetricCard
-          title="Ingresos"
-          value={fmtMoney.format(metrics?.revenue?.total ?? 0)}
-          icon="💰"
-        />
-        <MetricCard
-          title="Tiempo promedio"
-          value={fmtAvgMinutesToHM(metrics?.averages?.avgMinutes)}
-          icon="⏱"
-        />
+        <MetricCard title="Tickets activos" value={metrics?.tickets?.open ?? "—"} icon="🎫" />
+        <MetricCard title="Tickets cerrados" value={metrics?.tickets?.closed ?? "—"} icon="✅" />
+        <MetricCard title="Ingresos" value={fmtMoney.format(metrics?.revenue?.total ?? 0)} icon="💰" />
+        <MetricCard title="Tiempo promedio" value={fmtAvgMinutesToHM(metrics?.averages?.avgMinutes)} icon="⏱" />
       </section>
 
-      {/* Debug (si quieres, luego lo quitamos) */}
+      <div style={{ marginBottom: 10 }}>
+        <b>Rango:</b> {range}
+      </div>
+
       <p style={{ color: "#666" }}>Build: {BUILD_MARK}</p>
       <p style={{ color: "#666" }}>
         openTickets: {openTickets.length} | closedTickets: {closedTickets.length}
@@ -169,8 +164,7 @@ export default async function AdminDashboard({ searchParams }) {
         <ul>
           {openTickets.map((t) => (
             <li key={t.id}>
-              Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} —{" "}
-              {t.color ?? "—"}
+              Ticket #{t.id} — Placa: {t.plate ?? "—"} — Nivel: {t.level ?? "—"} — {t.color ?? "—"}
               <CloseTicketButton ticketId={t.id} />
             </li>
           ))}
@@ -183,7 +177,7 @@ export default async function AdminDashboard({ searchParams }) {
       {closedTickets.length ? (
         <ul>
           {closedTickets.map((t) => (
-            <li key={t.id} style={{ marginBottom: 8 }}>
+            <li key={t.id} style={{ marginBottom: 10 }}>
               <b>Ticket #{t.id}</b>
               {" — "}
               Total pagado: <b>{fmtMoney.format(t.finalAmount ?? 0)}</b>
