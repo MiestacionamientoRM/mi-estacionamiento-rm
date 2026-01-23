@@ -30,7 +30,7 @@ function getRangeDates(range) {
       return { from: start, to: now };
 
     default:
-      return { from: null, to: null }; // "all"
+      return { from: null, to: null }; // all
   }
 }
 
@@ -39,52 +39,57 @@ export async function GET(req) {
   const auth = requireAdmin();
   if (auth) return auth;
 
-  // ✅ Leer range
   const { searchParams } = new URL(req.url);
   const range = searchParams.get("range") || "all";
   const { from, to } = getRangeDates(range);
 
-  // ✅ Tickets abiertos: actuales (no dependen de rango)
+  // ✅ Abiertos (siempre por exitTime null)
   const openCount = await prisma.ticket.count({
-    where: { status: "OPEN" },
+    where: { exitTime: null },
   });
 
-  // ✅ Filtro base para CERRADOS
+  // ✅ Cerrados (base)
+  const closedBase = { exitTime: { not: null } };
+
+  // ✅ Cerrados filtrados por rango (por exitTime)
   const closedWhere = {
-    status: "CLOSED",
+    ...closedBase,
     ...(from && to ? { exitTime: { gte: from, lt: to } } : {}),
     ...(from && !to ? { exitTime: { gte: from } } : {}),
   };
 
-  // ✅ Cerrados (en rango)
-  const closedCount = await prisma.ticket.count({
-    where: closedWhere,
-  });
+  const closedCount = await prisma.ticket.count({ where: closedWhere });
 
-  // ✅ Ingresos (en rango)
+  // 💰 Ingresos totales (solo cerrados en rango)
   const revenueAgg = await prisma.ticket.aggregate({
     where: closedWhere,
     _sum: { finalAmount: true },
   });
 
-  // ✅ Tiempo promedio (en rango)
+  // ⏱️ Tiempo promedio (solo cerrados en rango)
   const avgTimeAgg = await prisma.ticket.aggregate({
     where: closedWhere,
     _avg: { totalMins: true },
   });
 
-  // ✅ Cobro vs tolerancia (en rango)
+  // 🎟️ Cobro vs tolerancia (solo cerrados en rango)
   const chargedCount = await prisma.ticket.count({
-    where: { ...closedWhere, chargeableMins: { gt: 0 } },
+    where: {
+      ...closedWhere,
+      chargeableMins: { gt: 0 },
+    },
   });
 
   const toleranceCount = await prisma.ticket.count({
-    where: { ...closedWhere, chargeableMins: 0 },
+    where: {
+      ...closedWhere,
+      chargeableMins: 0,
+    },
   });
 
   return NextResponse.json({
     ok: true,
-    range, // útil para debug
+    range,
     tickets: {
       open: openCount,
       closed: closedCount,
