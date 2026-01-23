@@ -25,7 +25,7 @@ function getRangeDates(range) {
       return { from: start, to: now };
 
     case "year":
-      start.setMonth(0, 1); // Jan 1
+      start.setMonth(0, 1);
       start.setHours(0, 0, 0, 0);
       return { from: start, to: now };
 
@@ -39,59 +39,52 @@ export async function GET(req) {
   const auth = requireAdmin();
   if (auth) return auth;
 
-  // ✅ Lee ?range=
+  // ✅ Leer range
   const { searchParams } = new URL(req.url);
   const range = searchParams.get("range") || "all";
   const { from, to } = getRangeDates(range);
 
-  // ✅ Filtro para tickets cerrados basado en exitTime
-  // (para ingresos y tiempos, tiene sentido por cierre)
+  // ✅ Tickets abiertos: actuales (no dependen de rango)
+  const openCount = await prisma.ticket.count({
+    where: { status: "OPEN" },
+  });
+
+  // ✅ Filtro base para CERRADOS
   const closedWhere = {
-    exitTime: { not: null },
+    status: "CLOSED",
     ...(from && to ? { exitTime: { gte: from, lt: to } } : {}),
     ...(from && !to ? { exitTime: { gte: from } } : {}),
   };
 
-  // 📊 Tickets abiertos (no dependen de rango)
-  const openCount = await prisma.ticket.count({
-    where: { exitTime: null },
-  });
-
-  // 📊 Tickets cerrados (SÍ dependen del rango)
+  // ✅ Cerrados (en rango)
   const closedCount = await prisma.ticket.count({
     where: closedWhere,
   });
 
-  // 💰 Ingresos totales (solo cerrados en rango)
+  // ✅ Ingresos (en rango)
   const revenueAgg = await prisma.ticket.aggregate({
     where: closedWhere,
     _sum: { finalAmount: true },
   });
 
-  // ⏱️ Tiempo promedio (solo cerrados en rango)
+  // ✅ Tiempo promedio (en rango)
   const avgTimeAgg = await prisma.ticket.aggregate({
     where: closedWhere,
     _avg: { totalMins: true },
   });
 
-  // 🎟️ Tickets con cobro vs tolerancia (solo cerrados en rango)
+  // ✅ Cobro vs tolerancia (en rango)
   const chargedCount = await prisma.ticket.count({
-    where: {
-      ...closedWhere,
-      chargeableMins: { gt: 0 },
-    },
+    where: { ...closedWhere, chargeableMins: { gt: 0 } },
   });
 
   const toleranceCount = await prisma.ticket.count({
-    where: {
-      ...closedWhere,
-      chargeableMins: 0,
-    },
+    where: { ...closedWhere, chargeableMins: 0 },
   });
 
   return NextResponse.json({
     ok: true,
-    range,
+    range, // útil para debug
     tickets: {
       open: openCount,
       closed: closedCount,
