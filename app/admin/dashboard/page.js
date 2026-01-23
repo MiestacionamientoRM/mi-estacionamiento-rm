@@ -188,6 +188,8 @@ export default async function AdminDashboard({ searchParams }) {
               {" — "}
               Total pagado: <b>{fmtMoney.format(t.finalAmount ?? 0)}</b>
               {" — "}
+              Entrada: {t.entryTime ? fmt.format(new Date(t.entryTime)) : "—"}
+              {" — "}
               Salida: {t.exitTime ? fmt.format(new Date(t.exitTime)) : "—"}
               {t.exitGate ? ` — Salida: ${t.exitGate}` : ""}
 
