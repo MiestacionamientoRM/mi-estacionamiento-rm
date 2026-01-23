@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+
 import LogoutButton from "./LogoutButton";
 import CloseTicketButton from "./CloseTicketButton";
 import { prisma } from "../../../lib/prisma";
@@ -90,13 +92,24 @@ function getRangeDates(range) {
 }
 
 async function getMetrics(range) {
-  const url = new URL(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/metrics`
-  );
+  const url = new URL(`${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/metrics`);
   if (range && range !== "all") url.searchParams.set("range", range);
 
   const res = await fetch(url.toString(), { cache: "no-store" });
   return res.json();
+}
+
+function pill(active) {
+  return {
+    display: "inline-block",
+    padding: "6px 10px",
+    borderRadius: 999,
+    border: "1px solid #ddd",
+    textDecoration: "none",
+    fontSize: 14,
+    background: active ? "#111" : "#fff",
+    color: active ? "#fff" : "#111",
+  };
 }
 
 export default async function AdminDashboard({ searchParams }) {
@@ -107,10 +120,10 @@ export default async function AdminDashboard({ searchParams }) {
   const range = searchParams?.range ?? "all";
   const { from, to } = getRangeDates(range);
 
-  // ✅ 2) Métricas con rango (si tu endpoint /metrics lo soporta)
+  // ✅ 2) Métricas con rango
   const metrics = await getMetrics(range);
 
-  // ✅ 3) Tickets abiertos
+  // ✅ 3) Tickets abiertos (no dependen del rango)
   const openTickets = await prisma.ticket.findMany({
     where: { exitTime: null },
     orderBy: { id: "desc" },
@@ -118,14 +131,12 @@ export default async function AdminDashboard({ searchParams }) {
   });
 
   // ✅ 4) Tickets cerrados filtrados por rango (por exitTime)
-  const closedWhere = {
-    exitTime: { not: null },
-    ...(from && to ? { exitTime: { gte: from, lt: to } } : {}),
-    ...(from && !to ? { exitTime: { gte: from } } : {}),
-  };
-
   const closedTickets = await prisma.ticket.findMany({
-    where: closedWhere,
+    where: {
+      exitTime: { not: null },
+      ...(from && to ? { exitTime: { gte: from, lt: to } } : {}),
+      ...(from && !to ? { exitTime: { gte: from } } : {}),
+    },
     orderBy: { exitTime: "desc" },
     take: 50,
   });
@@ -134,12 +145,27 @@ export default async function AdminDashboard({ searchParams }) {
     <main style={{ padding: 20 }}>
       <h1>Panel Admin</h1>
 
+      {/* ✅ Barra de rangos (solo UNA) */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "10px 0 18px" }}>
+        <Link href="/admin/dashboard?range=today" style={pill(range === "today")}>Hoy</Link>
+        <Link href="/admin/dashboard?range=7d" style={pill(range === "7d")}>7 días</Link>
+        <Link href="/admin/dashboard?range=30d" style={pill(range === "30d")}>30 días</Link>
+        <Link href="/admin/dashboard?range=month" style={pill(range === "month")}>Mes</Link>
+        <Link href="/admin/dashboard?range=year" style={pill(range === "year")}>Año</Link>
+        <Link href="/admin/dashboard?range=all" style={pill(range === "all")}>Todo</Link>
+      </div>
+
+      <p style={{ margin: 0, color: "#666" }}>
+        Rango: <b>{range}</b>
+      </p>
+
       <section
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
           gap: 16,
           marginBottom: 24,
+          marginTop: 12,
         }}
       >
         <MetricCard title="Tickets activos" value={metrics?.tickets?.open ?? "—"} icon="🎫" />
@@ -147,10 +173,6 @@ export default async function AdminDashboard({ searchParams }) {
         <MetricCard title="Ingresos" value={fmtMoney.format(metrics?.revenue?.total ?? 0)} icon="💰" />
         <MetricCard title="Tiempo promedio" value={fmtAvgMinutesToHM(metrics?.averages?.avgMinutes)} icon="⏱" />
       </section>
-
-      <div style={{ marginBottom: 10 }}>
-        <b>Rango:</b> {range}
-      </div>
 
       <p style={{ color: "#666" }}>Build: {BUILD_MARK}</p>
       <p style={{ color: "#666" }}>
@@ -190,10 +212,7 @@ export default async function AdminDashboard({ searchParams }) {
               <div style={{ color: "#555", marginTop: 2 }}>
                 Status: {t.status ?? "—"} ·{" "}
                 Tiempo total: {fmtDuration(t.totalMins)} ·{" "}
-                Cobrable: {fmtMoney.format(t.finalAmount ?? 0)}
-                {t.plate ? ` · Placa: ${t.plate}` : ""}
-                {t.level != null ? ` · Nivel: ${t.level}` : ""}
-                {t.color ? ` · Color: ${t.color}` : ""}
+                Cobrado: {fmtMoney.format(t.finalAmount ?? 0)}
               </div>
             </li>
           ))}
