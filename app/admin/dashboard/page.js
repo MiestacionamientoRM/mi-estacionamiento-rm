@@ -61,9 +61,46 @@ function fmtAvgMinutesToHM(mins) {
   return `${h} h ${r} min`;
 }
 
-export default async function AdminDashboard() {
+function getRangeDates(range) {
+  const now = new Date();
+  const start = new Date(now);
+
+  switch (range) {
+    case "today":
+      start.setHours(0, 0, 0, 0);
+      return { from: start, to: now };
+
+    case "7d":
+      start.setDate(start.getDate() - 7);
+      return { from: start, to: now };
+
+    case "30d":
+      start.setDate(start.getDate() - 30);
+      return { from: start, to: now };
+
+    case "month":
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      return { from: start, to: now };
+
+    case "year":
+      start.setMonth(0, 1); // Jan 1
+      start.setHours(0, 0, 0, 0);
+      return { from: start, to: now };
+
+    default:
+      return { from: null, to: null }; // "all"
+  }
+}
+
+
+export default async function AdminDashboard({ searchParams }) {
   const isAdmin = cookies().get("admin")?.value === "true";
   if (!isAdmin) redirect("/admin/login");
+
+  const range = searchParams?.range ?? "all";
+  const { from, to } = getRangeDates(range);
+
 
   // ✅ SOLO una vez
   const metrics = await getMetrics();
