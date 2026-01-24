@@ -40,51 +40,43 @@ export async function GET(req) {
   if (auth) return auth;
 
   const { searchParams } = new URL(req.url);
-  const range = searchParams.get("range") || "all";
+  const range = searchParams.get("range") ?? "all";
   const { from, to } = getRangeDates(range);
 
-  // ✅ Abiertos (siempre por exitTime null)
-  const openCount = await prisma.ticket.count({
-    where: { exitTime: null },
-  });
-
-  // ✅ Cerrados (base)
-  const closedBase = { exitTime: { not: null } };
-
-  // ✅ Cerrados filtrados por rango (por exitTime)
   const closedWhere = {
-    ...closedBase,
+    status: "CLOSED",
     ...(from && to ? { exitTime: { gte: from, lt: to } } : {}),
     ...(from && !to ? { exitTime: { gte: from } } : {}),
   };
 
-  const closedCount = await prisma.ticket.count({ where: closedWhere });
+  // 🎫 Conteos
+  const openCount = await prisma.ticket.count({
+    where: { status: "OPEN" },
+  });
 
-  // 💰 Ingresos totales (solo cerrados en rango)
+  const closedCount = await prisma.ticket.count({
+    where: closedWhere,
+  });
+
+  // 💰 Ingresos
   const revenueAgg = await prisma.ticket.aggregate({
     where: closedWhere,
     _sum: { finalAmount: true },
   });
 
-  // ⏱️ Tiempo promedio (solo cerrados en rango)
+  // ⏱️ Promedio tiempo
   const avgTimeAgg = await prisma.ticket.aggregate({
     where: closedWhere,
     _avg: { totalMins: true },
   });
 
-  // 🎟️ Cobro vs tolerancia (solo cerrados en rango)
+  // 🎟️ Breakdown
   const chargedCount = await prisma.ticket.count({
-    where: {
-      ...closedWhere,
-      chargeableMins: { gt: 0 },
-    },
+    where: { ...closedWhere, chargeableMins: { gt: 0 } },
   });
 
   const toleranceCount = await prisma.ticket.count({
-    where: {
-      ...closedWhere,
-      chargeableMins: 0,
-    },
+    where: { ...closedWhere, chargeableMins: 0 },
   });
 
   return NextResponse.json({
