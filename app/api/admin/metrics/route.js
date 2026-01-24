@@ -25,12 +25,12 @@ function getRangeDates(range) {
       return { from: start, to: now };
 
     case "year":
-      start.setMonth(0, 1);
+      start.setMonth(0, 1); // Jan 1
       start.setHours(0, 0, 0, 0);
       return { from: start, to: now };
 
     default:
-      return { from: null, to: null }; // all
+      return { from: null, to: null }; // "all"
   }
 }
 
@@ -39,45 +39,52 @@ export async function GET(req) {
   const auth = requireAdmin();
   if (auth) return auth;
 
+  // ✅ leer range desde querystring
   const { searchParams } = new URL(req.url);
   const range = searchParams.get("range") ?? "all";
+
+  // ✅ calcular fechas
   const { from, to } = getRangeDates(range);
 
-  const closedWhere = {
+  // ✅ PASO 5: filtro reutilizable para tickets CERRADOS + rango
+  const whereClosed = {
     status: "CLOSED",
     ...(from && to ? { exitTime: { gte: from, lt: to } } : {}),
     ...(from && !to ? { exitTime: { gte: from } } : {}),
   };
 
-  // 🎫 Conteos
+  // ✅ Tickets activos (no dependen del rango)
   const openCount = await prisma.ticket.count({
-    where: { exitTime: null },
+    where: { status: "OPEN" },
   });
 
-
+  // ✅ PASO 6: usar whereClosed en TODAS las métricas de cerrados
   const closedCount = await prisma.ticket.count({
-    where: closedWhere,
+    where: whereClosed,
   });
 
-  // 💰 Ingresos
   const revenueAgg = await prisma.ticket.aggregate({
-    where: closedWhere,
+    where: whereClosed,
     _sum: { finalAmount: true },
   });
 
-  // ⏱️ Promedio tiempo
   const avgTimeAgg = await prisma.ticket.aggregate({
-    where: closedWhere,
+    where: whereClosed,
     _avg: { totalMins: true },
   });
 
-  // 🎟️ Breakdown
   const chargedCount = await prisma.ticket.count({
-    where: { ...closedWhere, chargeableMins: { gt: 0 } },
+    where: {
+      ...whereClosed,
+      chargeableMins: { gt: 0 },
+    },
   });
 
   const toleranceCount = await prisma.ticket.count({
-    where: { ...closedWhere, chargeableMins: 0 },
+    where: {
+      ...whereClosed,
+      chargeableMins: 0,
+    },
   });
 
   return NextResponse.json({
