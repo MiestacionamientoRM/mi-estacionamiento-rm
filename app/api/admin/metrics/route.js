@@ -51,8 +51,9 @@ export async function GET(req) {
 
   // 🎫 Conteos
   const openCount = await prisma.ticket.count({
-    where: { status: "OPEN" },
+    where: { exitTime: null },
   });
+
 
   const closedCount = await prisma.ticket.count({
     where: closedWhere,
