@@ -13,8 +13,6 @@ function calcFinalMxN({ entryTime, now, tariff }) {
   const fractionMin = tariff?.fractionMin ?? 15;
   const fractionPrice = tariff?.fractionPrice ?? 0;
   const dailyCap = tariff?.dailyCap ?? null;
-  
-
 
   if (mins <= tolerance) return { mins, chargeableMins: 0, total: 0 };
 
@@ -40,7 +38,6 @@ export async function POST(req) {
     const ticketId = Number(body.ticketId);
     const exitGate = body.exitGate != null ? String(body.exitGate).trim() : null;
 
-
     if (!Number.isFinite(ticketId)) {
       return NextResponse.json({ error: "ticketId inválido" }, { status: 400 });
     }
@@ -54,51 +51,45 @@ export async function POST(req) {
       return NextResponse.json({ error: "Ticket no existe" }, { status: 404 });
     }
 
-    // ya cerrado
-    if (ticket.exitTime) {
-  // Si mandan exitGate y aún no existe, lo guardamos (backfill)
-  if (exitGate && !ticket.exitGate) {
-    const updatedClosed = await prisma.ticket.update({
-      where: { id: ticketId },
-      data: { exitGate },
-      include: { plaza: { include: { tariffConfig: true } } },
-    });
-
-    return NextResponse.json({
-      ok: true,
-      alreadyClosed: true,
-      updatedExitGate: true,
-      ticketId: updatedClosed.id,
-      exitTime: updatedClosed.exitTime?.toISOString?.() ?? updatedClosed.exitTime,
-      totalMins: updatedClosed.totalMins ?? null,
-      chargeableMins: updatedClosed.chargeableMins ?? null,
-      finalAmount: updatedClosed.finalAmount ?? null,
-      currency: updatedClosed.plaza?.tariffConfig?.currency ?? "MXN",
-      status: updatedClosed.status ?? null,
-      entryGate: updatedClosed.entryGate ?? null,
-      exitGate: updatedClosed.exitGate ?? null,
-    });
-  }
-
-  // Si ya estaba cerrado y no hay nada que actualizar
-  return NextResponse.json({
-    ok: true,
-    alreadyClosed: true,
-    ticketId: ticket.id,
-    exitTime: ticket.exitTime.toISOString?.() ?? ticket.exitTime,
-    totalMins: ticket.totalMins ?? null,
-    chargeableMins: ticket.chargeableMins ?? null,
-    finalAmount: ticket.finalAmount ?? null,
-    currency: ticket.plaza?.tariffConfig?.currency ?? "MXN",
-    status: ticket.status ?? null,
-    entryGate: ticket.entryGate ?? null,
-    exitGate: ticket.exitGate ?? null,
-  });
-}
-
-
-    const now = new Date();
     const tariff = ticket.plaza?.tariffConfig;
+
+    // ✅ Si ya está cerrado: devolvemos histórico completo
+    // (y si mandan exitGate y no existe, lo “backfill”)
+    if (ticket.exitTime) {
+      let t = ticket;
+
+      if (exitGate && !ticket.exitGate) {
+        t = await prisma.ticket.update({
+          where: { id: ticketId },
+          data: { exitGate },
+          include: { plaza: { include: { tariffConfig: true } } },
+        });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        alreadyClosed: true,
+        ticket: {
+          id: t.id,
+          status: t.status ?? "CLOSED",
+          plazaId: t.plazaId,
+          plate: t.plate,
+          level: t.level,
+          color: t.color,
+          entryGate: t.entryGate ?? null,
+          exitGate: t.exitGate ?? null,
+          entryTime: t.entryTime?.toISOString?.() ?? t.entryTime,
+          exitTime: t.exitTime?.toISOString?.() ?? t.exitTime,
+          totalMins: t.totalMins ?? null,
+          chargeableMins: t.chargeableMins ?? null,
+          finalAmount: t.finalAmount ?? null,
+          currency: t.plaza?.tariffConfig?.currency ?? "MXN",
+        },
+      });
+    }
+
+    // ✅ Cerrar ticket (primera vez)
+    const now = new Date();
 
     const { mins, chargeableMins, total } = calcFinalMxN({
       entryTime: ticket.entryTime,
@@ -107,19 +98,19 @@ export async function POST(req) {
     });
 
     const updated = await prisma.ticket.update({
-  where: { id: ticketId },
-  data: {
-    exitTime: now,
-    exitGate,
-    totalMins: mins,
-    chargeableMins,
-    finalAmount: total,
-    status: "CLOSED",
-  },
-});
+      where: { id: ticketId },
+      data: {
+        exitTime: now,
+        exitGate,
+        totalMins: mins,
+        chargeableMins,
+        finalAmount: total,
+        status: "CLOSED",
+      },
+      include: { plaza: { include: { tariffConfig: true } } },
+    });
 
-
-    // revoca tokens ligados al ticket (para que el QR deje de servir)
+    // ✅ Revocar tokens ligados (QR ya no sirve)
     await prisma.ticketToken.updateMany({
       where: { ticketId: updated.id, revokedAt: null },
       data: { revokedAt: now },
@@ -127,12 +118,22 @@ export async function POST(req) {
 
     return NextResponse.json({
       ok: true,
-      ticketId: updated.id,
-      mins,
-      chargeableMins,
-      finalAmount: total,
-      currency: tariff?.currency ?? "MXN",
-      exitTime: now.toISOString(),
+      ticket: {
+        id: updated.id,
+        status: updated.status ?? "CLOSED",
+        plazaId: updated.plazaId,
+        plate: updated.plate,
+        level: updated.level,
+        color: updated.color,
+        entryGate: updated.entryGate ?? null,
+        exitGate: updated.exitGate ?? null,
+        entryTime: updated.entryTime?.toISOString?.() ?? updated.entryTime,
+        exitTime: updated.exitTime?.toISOString?.() ?? updated.exitTime,
+        totalMins: updated.totalMins ?? mins,
+        chargeableMins: updated.chargeableMins ?? chargeableMins,
+        finalAmount: updated.finalAmount ?? total,
+        currency: updated.plaza?.tariffConfig?.currency ?? "MXN",
+      },
     });
   } catch (e) {
     console.error(e);
