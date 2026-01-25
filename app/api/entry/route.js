@@ -11,10 +11,18 @@ export async function POST(req) {
     const body = await req.json();
 
     const plazaId = Number(body.plazaId ?? 1);
-    const plate = String(body.plate ?? "").trim() || null;
-    const level = body.level != null && body.level !== "" ? Number(body.level) : null;
+
+    const plateRaw = String(body.plate ?? "").trim();
+    const plate = plateRaw ? plateRaw.toUpperCase() : null;
+
+    const level =
+      body.level != null && body.level !== "" ? Number(body.level) : null;
+
     const color = body.color != null ? String(body.color) : null;
-    const entryGate = body.entryGate != null ? String(body.entryGate).trim() : null;
+
+    const entryGateRaw =
+      body.entryGate != null ? String(body.entryGate).trim() : "";
+    const entryGate = entryGateRaw.length ? entryGateRaw : null;
 
     if (!Number.isFinite(plazaId)) {
       return NextResponse.json({ error: "plazaId inválido" }, { status: 400 });
@@ -34,6 +42,7 @@ export async function POST(req) {
         color,
         entryGate,
         entryTime: new Date(),
+        status: "OPEN",
       },
     });
 
@@ -51,10 +60,10 @@ export async function POST(req) {
       data: { ticketId: ticket.id, tokenHash, expiresAt },
     });
 
-    // 4) URL QR (usa tu dominio actual)
+    // 4) URL QR
     const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    "https://mi-estacionamiento-rm.vercel.app";
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      "https://mi-estacionamiento-rm.vercel.app";
 
     const qrUrl = `${baseUrl}/ticket/${plainToken}`;
 
@@ -62,6 +71,9 @@ export async function POST(req) {
       ok: true,
       ticketId: ticket.id,
       qrUrl,
+      status: ticket.status,
+      entryTime: ticket.entryTime,
+      entryGate: ticket.entryGate,
     });
   } catch (e) {
     console.error(e);
