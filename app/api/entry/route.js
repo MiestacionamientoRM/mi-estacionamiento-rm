@@ -74,6 +74,9 @@ export async function POST(req) {
       status: ticket.status,
       entryTime: ticket.entryTime,
       entryGate: ticket.entryGate,
+      plate: ticket.plate,
+      level: ticket.level,
+      color: ticket.color,
     });
   } catch (e) {
     console.error(e);
