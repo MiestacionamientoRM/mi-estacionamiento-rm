@@ -1,0 +1,14 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: "0 */12 * * *" # cada 12 horas
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call keep-alive endpoint
+        run: |
+          curl -sS -m 20 "https://mi-estacionamiento-rm.vercel.app/api/keep-alive"
